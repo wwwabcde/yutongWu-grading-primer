@@ -1,25 +1,44 @@
 services:
   db:
-    image: postgres:15
+    image: postgres:16
     environment:
-      POSTGRES_USER: marksuser
-      POSTGRES_PASSWORD: markspass
-      POSTGRES_DB: marksdb
-    # Pre-seed script is required as a volume to load mock database
-    # Data inside the container is lost on restart unless you persist it with a volume.
+      POSTGRES_DB: grading
+      POSTGRES_USER: grading
+      POSTGRES_PASSWORD: grading
     ports:
       - "5432:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - grading_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grading -d grading"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   backend:
-    # TODO: you will need to add to this
+    build:
+      context: ./backend
+    environment:
+      DB_HOST: db
+      DB_NAME: grading
+      DB_USER: grading
+      DB_PASSWORD: grading
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5001:5000"
 
   frontend:
-    # TODO: you will need to add to this
-
-  automark:
-    build: ./automark
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5000
     depends_on:
       - backend
-      - db
-    profiles:
-      - debug
+    ports:
+      - "8080:80"
+
+volumes:
+  grading_db_data:
