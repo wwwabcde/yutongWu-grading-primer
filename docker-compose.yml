@@ -39,6 +39,13 @@ services:
       - backend
     ports:
       - "8080:80"
+  automark:
+    build: ./automark
+    depends_on:
+      - backend
+      - db
+    profiles:
+      - debug
 
 volumes:
   grading_db_data:
